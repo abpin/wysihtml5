@@ -92,7 +92,7 @@
     },
 
     hasPlaceholderSet: function() {
-      return this.getTextContent() == this.textarea.element.getAttribute("placeholder");
+      return this.getTextContent() == this.textarea.element.getAttribute("placeholder") && this.placeholderSet;
     },
 
     isEmpty: function() {
@@ -113,17 +113,18 @@
         stylesheets:  this.config.stylesheets
       });
       this.iframe  = this.sandbox.getIframe();
-
-      // Create hidden field which tells the server after submit, that the user used an wysiwyg editor
-      var hiddenField = document.createElement("input");
-      hiddenField.type   = "hidden";
-      hiddenField.name   = "_wysihtml5_mode";
-      hiddenField.value  = 1;
-
-      // Store reference to current wysihtml5 instance on the textarea element
+      
       var textareaElement = this.textarea.element;
       dom.insert(this.iframe).after(textareaElement);
-      dom.insert(hiddenField).after(textareaElement);
+      
+      // Create hidden field which tells the server after submit, that the user used an wysiwyg editor
+      if (textareaElement.form) {
+        var hiddenField = document.createElement("input");
+        hiddenField.type   = "hidden";
+        hiddenField.name   = "_wysihtml5_mode";
+        hiddenField.value  = 1;
+        dom.insert(hiddenField).after(textareaElement);
+      }
     },
 
     _create: function() {
@@ -177,7 +178,7 @@
 
       // Simulate html5 autofocus on contentEditable element
       if (this.textarea.element.hasAttribute("autofocus") || document.querySelector(":focus") == this.textarea.element) {
-        setTimeout(function() { that.focus(); }, 100);
+        setTimeout(function() { that.focus(true); }, 100);
       }
 
       wysihtml5.quirks.insertLineBreakOnReturn(this);
@@ -222,6 +223,10 @@
           that.selection.executeAndRestore(function(startContainer, endContainer) {
             dom.autoLink(endContainer.parentNode);
           });
+        });
+        
+        dom.observe(this.element, "blur", function() {
+          dom.autoLink(that.element);
         });
       }
 
@@ -307,7 +312,7 @@
     },
     
     _initUndoManager: function() {
-      new wysihtml5.UndoManager(this.parent);
+      this.undoManager = new wysihtml5.UndoManager(this.parent);
     }
   });
 })(wysihtml5);
